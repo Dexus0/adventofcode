@@ -41,7 +41,7 @@ fn process_file(file: &OsStr) -> Result<usize> {
 fn calculate_calibration_value(line: &[u8]) -> usize {
     const ZERO: u8 = b'0';
     const NINE: u8 = b'9';
-    const ASCII_MASK: u8 = b'0';
+    const ASCII_MASK: u8 = 0x0F;
 
     let mut first = 0;
     let mut last = 0;
@@ -50,7 +50,7 @@ fn calculate_calibration_value(line: &[u8]) -> usize {
         match *char {
             ZERO..=NINE => {
                 first = *char;
-                first ^= ASCII_MASK;
+                first &= ASCII_MASK;
                 break;
             }
             _ => continue,
@@ -61,7 +61,7 @@ fn calculate_calibration_value(line: &[u8]) -> usize {
         match *char {
             ZERO..=NINE => {
                 last = *char;
-                last ^= ASCII_MASK;
+                last &= ASCII_MASK;
                 break;
             }
             _ => continue,
