@@ -1,11 +1,12 @@
-use regex::bytes::Regex;
 use std::io::{ErrorKind, Result};
+use std::num::NonZeroU8;
 
 fn main() -> Result<()> {
     use std::env::args_os;
     use std::fs::read;
 
-    let input = args_os().nth(1).unwrap_or_default(); // 0th is a garbage/undefined value
+    let input = args_os().nth(1).unwrap_or_default(); // 0th is a garbage/undefined value;
+                                                      // everything after is a command line given arg.
 
     let result = process_data(&mut read(input)?)?;
 
@@ -43,63 +44,91 @@ fn process_data<T: AsMut<[u8]>>(mut rawdata: T) -> Result<usize> {
 /// # Usage
 /// Assumes input is lowercase ASCII
 fn calculate_calibration_value(line: &[u8]) -> u8 {
-    use std::str;
-    let regex = unsafe {
-        // This should be valid regex
-        Regex::new(r"[1-9]|one|two|three|four|five|six|seven|eight|nine").unwrap_unchecked()
-    };
+    fn find_first_and_last(line: &[u8]) -> (u8, u8) {
+        let first;
+        let last;
 
-    let mut iter = regex.find_iter(line);
-
+        let mut begin = 0;
+        let len = line.len();
+        loop {
+            if begin == len {
+                first = 0;
+                last = first;
+                return (first, last);
+            } else if let Some(val) = match_ascii(&line[begin..len]) {
+                first = val.into();
+                break;
+            };
+            begin += 1;
+        }
+        begin += 1; // like this we won't match the same num twice; this saves us some performance as the end branch sets `last = first` anyway.
+        let mut i = len;
+        loop {
+            i -= 1;
+            if let Some(val) = match_ascii(&line[i..len]) {
+                last = val.into();
+                break;
+            } else if i == begin {
+                last = first;
+                return (first, last);
+            }
+        }
+        (first, last)
+    }
     unsafe {
-        print!("{} ", str::from_utf8_unchecked(line));
+        use std::str;
+        let print = str::from_utf8_unchecked(line);
+        print!("{print} ");
     }
 
-    let first = if let Some(matched) = iter.next() {
-        unsafe {
-            print!("{}", str::from_utf8_unchecked(matched.as_bytes()));
-        }
-        ascii_to_value(matched.as_bytes())
-    } else {
-        0
-    };
+    let (first, last) = find_first_and_last(line);
 
-    let last = if let Some(matched) = iter.last() {
-        unsafe {
-            print!("{}", std::str::from_utf8_unchecked(matched.as_bytes()));
-        }
-        ascii_to_value(matched.as_bytes())
-    } else {
-        first
-    };
-
-    print!(" {first}{last} ");
+    print!("{first}{last} ");
 
     let result = first * 10 + last;
     println!("{result}");
     result
 }
-
+/// Takes an ASCII str and return appropriate u8 value
 /// # Usage
 /// Assumes input is lowercase ASCII
-fn ascii_to_value(str: &[u8]) -> u8 {
-    const ASCII_MASK: u8 = 0x0F;
+fn match_ascii<T: AsRef<[u8]>>(str: T) -> Option<NonZeroU8> {
+    const ASCII_MASK: u8 = 0xF;
+    const NUM_WORDS: [&str; 9] = [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
+    const MIN_WORD_LEN: usize = 3;
 
-    match str {
-        b"one" => 1,
-        b"two" => 2,
-        b"three" => 3,
-        b"four" => 4,
-        b"five" => 5,
-        b"six" => 6,
-        b"seven" => 7,
-        b"eight" => 8,
-        b"nine" => 9,
-        str => match str[0] {
-            char @ b'1'..=b'9' => char & ASCII_MASK,
-            _ => 0,
-        },
+    let str = str.as_ref();
+
+    if let char @ b'1'..=b'9' = str[0] {
+        // we do not match b'0', so it can never be 0
+        return Some(unsafe { NonZeroU8::new_unchecked(char & ASCII_MASK) });
     }
+    if str.len() < MIN_WORD_LEN {
+        return None;
+    }
+    for word in NUM_WORDS {
+        if word.len() > str.len() {
+            continue;
+        }
+        let str = &str[..word.len()];
+        unsafe {
+            return Some(NonZeroU8::new_unchecked(match str {
+                b"one" => 1,
+                b"two" => 2,
+                b"three" => 3,
+                b"four" => 4,
+                b"five" => 5,
+                b"six" => 6,
+                b"seven" => 7,
+                b"eight" => 8,
+                b"nine" => 9,
+                _ => continue,
+            }));
+        }
+    }
+    None
 }
 
 #[cfg(test)]
