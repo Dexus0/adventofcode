@@ -7,15 +7,17 @@ fn main() -> Result<()> {
 
     let input = args_os().nth(1).unwrap_or_default(); // 0th is a garbage/undefined value
 
-    let result = process_data(read(input)?)?;
+    let result = process_data(&mut read(input)?)?;
 
     println!("{result}");
 
     Ok(())
 }
 
-fn process_data(mut rawdata: Vec<u8>) -> Result<usize> {
+fn process_data<T: AsMut<[u8]>>(mut rawdata: T) -> Result<usize> {
     use std::io::Error;
+
+    let rawdata = rawdata.as_mut();
 
     let calibration_file = if rawdata.is_ascii() {
         rawdata.make_ascii_lowercase();
@@ -102,15 +104,11 @@ fn ascii_to_value(str: &[u8]) -> u8 {
 
 #[cfg(test)]
 mod examples {
-    use super::process_data;
+    use super::*;
+
     #[test]
     fn part1() {
-        let rawdata = "1abc2
-pqr3stu8vwx
-a1b2c3d4e5f
-treb7uchet"
-            .as_bytes()
-            .to_owned();
+        let rawdata = include_bytes!("../examples/part1.txt").to_owned();
 
         let result = process_data(rawdata).unwrap_or_default();
 
@@ -119,15 +117,8 @@ treb7uchet"
 
     #[test]
     fn part2() {
-        let rawdata = "two1nine
-eightwothree
-abcone2threexyz
-xtwone3four
-4nineeightseven2
-zoneight234
-7pqrstsixteen"
-            .as_bytes()
-            .to_owned();
+        let rawdata = include_bytes!("../examples/part2.txt").to_owned();
+
         let result = process_data(rawdata).unwrap_or_default();
 
         assert_eq!(result, 281);
