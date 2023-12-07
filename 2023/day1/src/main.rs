@@ -75,6 +75,7 @@ fn calculate_calibration_value(line: &[u8]) -> u8 {
         }
         (first, last)
     }
+    #[cfg(debug_assertions)]
     unsafe {
         use std::str;
         let print = str::from_utf8_unchecked(line);
@@ -83,10 +84,13 @@ fn calculate_calibration_value(line: &[u8]) -> u8 {
 
     let (first, last) = find_first_and_last(line);
 
+    #[cfg(debug_assertions)]
     print!("{first}{last} ");
 
     let result = first * 10 + last;
+    #[cfg(debug_assertions)]
     println!("{result}");
+    #[cfg_attr(not(debug_assertions), allow(clippy::let_and_return))]
     result
 }
 /// Takes an ASCII str and return appropriate u8 value
