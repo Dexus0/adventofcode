@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     let input = args_os().nth(1).unwrap_or_default(); // 0th is a garbage/undefined value;
                                                       // everything after is a command line given arg.
 
-    let result = process_data(&mut read(input)?)?;
+    let result = process_data(read(input)?)?;
 
     println!("{result}");
 
