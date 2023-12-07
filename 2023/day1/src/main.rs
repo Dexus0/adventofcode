@@ -138,6 +138,20 @@ fn match_ascii<T: AsRef<[u8]>>(str: T) -> Option<NonZeroU8> {
 #[cfg(test)]
 mod examples {
     use super::*;
+    const ASCII_MASK: u8 = 0xF;
+
+    fn get_num(str: &[u8]) -> usize {
+        let mut result: usize = 0;
+        for char in str {
+            if let n @ b'1'..=b'9' = char {
+                result *= 10;
+                result += (n & ASCII_MASK) as usize;
+            } else {
+                return result;
+            }
+        }
+        result
+    }
 
     #[test]
     fn part1() {
@@ -145,7 +159,7 @@ mod examples {
 
         let result = process_data(rawdata).unwrap_or_default();
 
-        assert_eq!(result, 142);
+        assert_eq!(result, get_num(include_bytes!("../examples/answer1")));
     }
 
     #[test]
@@ -154,6 +168,6 @@ mod examples {
 
         let result = process_data(rawdata).unwrap_or_default();
 
-        assert_eq!(result, 281);
+        assert_eq!(result, get_num(include_bytes!("../examples/answer2")));
     }
 }
